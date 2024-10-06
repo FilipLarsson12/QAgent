@@ -7,7 +7,9 @@ from matplotlib.lines import Line2D
 
 plt.ion()
 
+# Class that defines the gameboard
 class Board:
+    # generate the board and place start and goal positions
     def __init__(self, width, height, obstacle_ratio=0.2):
         self.width = width
         self.height = height
@@ -27,6 +29,7 @@ class Board:
         )
         plt.subplots_adjust(left=0.1, right=0.9)
 
+    # generates the board
     def generate_grid(self):
         grid = np.zeros((self.height, self.width), dtype=int)
         for i in range(self.width):
@@ -46,6 +49,7 @@ class Board:
             grid[i][j] = -1
         return grid
 
+    # used to create start and goal positions, ensures that the cell isn't completely surrounded by obstacles
     def get_random_empty_cell(self):
         empty_cells = [(i, j) for i in range(self.height)
                        for j in range(self.width) if self.grid[i][j] == 0 and self.has_free_neighbor(i, j)]
@@ -55,6 +59,7 @@ class Board:
         self.grid[self.start_pos] = 1
         self.grid[self.goal_pos] = 2
 
+    # helper method to check that a cell isn't completely surrounded by obstacles
     def has_free_neighbor(self, i, j):
         neighbors = [
             (i-1, j),
@@ -67,6 +72,7 @@ class Board:
                 return True
         return False
 
+    # method that visualizes the board and the agent as well as other details such as maximum Q values
     def visualize(
         self,
         agent_pos=None,
@@ -189,10 +195,12 @@ class Board:
         self.fig.canvas.flush_events()
         plt.pause(1.0 / frame_rate)
 
+# class that defines the agent/player
 class Agent:
     def __init__(self, board):
         self.board = board
         self.position = board.start_pos
+        # these parameters defines how the Q learning algorithm updates the agent's actions in every possible state
         self.actions = ['up', 'down', 'left', 'right']
         self.q_table = {}
         self.alpha = 0.1
@@ -201,28 +209,34 @@ class Agent:
         self.epsilon_decay = 0.995
         self.epsilon_min = 0.01
 
+    # choose an action given a state based on what the q_table parameter says
     def choose_action(self, state):
+        # slef.epsilon is the probability to choose a random action (called explorability in the Q learning framework) 
         if random.uniform(0, 1) < self.epsilon:
             action = random.choice(self.actions)
         else:
+            # in this block we choose the action that corresponds to the maximum estimated accumulated reward (called exploitation in th Q learning framework)
             q_values = [self.q_table.get((state, a), 0) for a in self.actions]
             max_q = max(q_values)
             max_actions = [a for a, q in zip(self.actions, q_values) if q == max_q]
             action = random.choice(max_actions)
         return action
     
+    # this is the method that takes feedback/rewards from the environment and actually updates the q_table that informs the agent what actions to take in a given state
     def update_q_value(self, state, action, reward, next_state):
         old_value = self.q_table.get((state, action), 0)
         next_max = max([self.q_table.get((next_state, a), 0) for a in self.actions])
         new_value = old_value + self.alpha * (reward + self.gamma * next_max - old_value)
         self.q_table[(state, action)] = new_value
 
+    # we decay the parameter that generates random actions so we converge to actions that give maximum accumulative rewards
     def decay_epsilon(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         else:
             self.epsilon = self.epsilon_min
 
+    # moves the agent and checks what reward we got. -1 for moving into an empty cell, -100 for moving into an obstacle, 100 for moving into the goal_position
     def move(self, action):
         actions = {
             'up': (-1, 0),
@@ -246,9 +260,11 @@ class Agent:
                 obstacle_hit = True
         return reward, self.position, goal_reached, obstacle_hit
 
+    # return the current state of the agent, this is just the position of the agent in our game
     def get_state(self):
         return self.position
 
+    # calls the board.visualize method and forwards the current position of the Agent
     def visualize(
         self,
         step_number=None,
@@ -270,10 +286,13 @@ class Agent:
         )
 
 def main():
+    # init board and agent as well as how many "lives" the agent has during its training period
     board = Board(width=40, height=40, obstacle_ratio=0.2)
     agent = Agent(board)
     num_episodes = 100000
 
+    # -- TRAINING PHASE --
+    # one iteration corresponds to one life of the agent, if the agent collides with an obstacle it dies.
     for episode in range(num_episodes):
         agent.position = board.start_pos
         state = agent.get_state()
@@ -289,24 +308,26 @@ def main():
                     split="Train",
                     show_q_values=True
                 )
-
+            # choose action
             action = agent.choose_action(state)
+            # move and get feedback from environment
             reward, next_state_pos, goal_reached, obstacle_hit = agent.move(action)
             next_state = next_state_pos
             total_reward += reward
-
+            # update Q values based on feedback from environment
             agent.update_q_value(state, action, reward, next_state)
 
             state = next_state
 
             if goal_reached or obstacle_hit:
                 break
-
+        # decay the chance of choosing actions randomly (exploration)
         agent.decay_epsilon()
 
         if (episode + 1) % 100 == 0:
             print(f"Episode {episode+1}/{num_episodes}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.2f}")
 
+    # -- TESTING PHASE --
     agent.epsilon = 0
     agent.position = board.start_pos
     state = agent.get_state()
