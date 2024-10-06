@@ -5,7 +5,7 @@ By updating what action the agent takes given a certain state, the agent learns 
 
 ## 🧠 What is Q-Learning?
 
-You can think of **Q-Learning** as teaching someone to find their way through a maze by rewarding them when they make good moves and discouraging them when they hit dead ends. It's a type of **reinforcement learning**, where the agent (our maze navigator) learns by interacting with its environment and learning from the consequences of its actions.
+**Q-Learning** is an RL method used to teach an agent to accomplish some sort of task inside a given envoronment automatically by having the agent try different actions and get subsequent feedback. In this case Q learning is making the agent finding it's way through a maze by rewarding it when it makes good moves and discouraging it when it hit dead ends. It's a type of **reinforcement learning**, where the agent (our maze navigator) learns by interacting with its environment and learning from the consequences of its actions.
 
 So we, the programmers, define different rewards for different outcomes inside the game. These rewards give feedback to the agent when it takes different actions. Based on this feedback, the agent updates what actions it takes in different states.
 
